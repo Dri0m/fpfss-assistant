@@ -69,7 +69,7 @@ func main() {
 	a.l.Infof("bai")
 }
 
-type submission struct {
+type Submission struct {
 	id      int64
 	status  string
 	fileURL string
@@ -79,13 +79,13 @@ type submission struct {
 func (a *app) download() {
 	a.fatalErr(os.MkdirAll(filePath, os.ModePerm))
 
-	a.printlnf("reading submission list from the DB...")
+	a.printlnf("reading Submission list from the DB...")
 
 	rows, err := a.db.Query(`SELECT id, status, file_url, sha256 FROM data WHERE status=?`, statusWaiting)
 	a.fatalErr(err)
 
-	submissions := make([]submission, 0, 1000)
-	var submission submission
+	submissions := make([]Submission, 0, 1000)
+	var submission Submission
 	for rows.Next() {
 		err = rows.Scan(&submission.id, &submission.status, &submission.fileURL, &submission.sha256)
 		a.fatalErr(err)
@@ -93,28 +93,42 @@ func (a *app) download() {
 	}
 	a.printlnf("read %d submissions\n", len(submissions))
 
-	for _, submission := range submissions {
-		a.printlnf("downloading submission with ID %d", submission.id)
-		body, err, filename := a.getFile(fmt.Sprintf("%s%s", a.config.BaseURL, submission.fileURL))
-		a.fatalErr(err)
-
-		fp := fmt.Sprintf("%s/%s", filePath, filename)
-		destination, err := os.Create(fp)
-		a.fatalErr(err)
-		sha256sum := sha256.New()
-		multiWriter := io.MultiWriter(destination, sha256sum)
-		_, err = io.Copy(multiWriter, body)
-		body.Close()
-		a.fatalErr(err)
-
-		if submission.sha256 != string(hex.EncodeToString(sha256sum.Sum(nil))) {
-			a.printlnf("FAILED: checksum mismatch on submission %d, removing file...", submission.id)
-			os.Remove(fp)
-		}
-
-		a.updateSubmissionStatus(submission.id, statusDownloaded)
-		a.printlnf("OK: submission %d successfully downloaded", submission.id)
+	ch := make(chan struct{}, a.config.DownloadThreads)
+	var i int64
+	for i = 0; i < a.config.DownloadThreads; i++ {
+		ch <- struct{}{}
 	}
+	wg := sync.WaitGroup{}
+
+	for _, submission := range submissions {
+		go func(submission Submission) {
+			wg.Add(1)
+			defer wg.Done()
+			<-ch
+			a.printlnf("downloading Submission with ID %d", submission.id)
+			body, err, filename := a.getFile(fmt.Sprintf("%s%s", a.config.BaseURL, submission.fileURL))
+			a.fatalErr(err)
+
+			fp := fmt.Sprintf("%s/%s", filePath, filename)
+			destination, err := os.Create(fp)
+			a.fatalErr(err)
+			sha256sum := sha256.New()
+			multiWriter := io.MultiWriter(destination, sha256sum)
+			_, err = io.Copy(multiWriter, body)
+			body.Close()
+			a.fatalErr(err)
+
+			if submission.sha256 != string(hex.EncodeToString(sha256sum.Sum(nil))) {
+				a.printlnf("FAILED: checksum mismatch on Submission %d, removing file...", submission.id)
+				os.Remove(fp)
+			}
+
+			a.updateSubmissionStatus(submission.id, statusDownloaded)
+			a.printlnf("OK: Submission %d successfully downloaded", submission.id)
+			ch <- struct{}{}
+		}(submission)
+	}
+	wg.Wait()
 }
 
 func (a *app) updateSubmissionStatus(id int64, status string) {
@@ -127,10 +141,10 @@ func (a *app) updateSubmissionStatus(id int64, status string) {
 func (a *app) search(n int) {
 	a.printlnf("searching for up to %d submisisons ready for FP...", n)
 
-	resp, err, _ := a.getResponse(fmt.Sprintf("%s/api/submissions?filter-layout=advanced&submission-id=&submitter-id=&submitter-username-partial=&bot-action=approve&verification-status=verified&distinct-action-not=mark-added&distinct-action-not=reject&title-partial=&platform-partial=&library-partial=&launch-command-fuzzy=&original-filename-partial-any=&current-filename-partial-any=&md5sum-partial-any=&sha256sum-partial-any=&results-per-page=%d&page=&order-by=uploaded&asc-desc=asc", a.config.BaseURL, n))
+	resp, err, _ := a.getResponse(fmt.Sprintf("%s/api/submissions?filter-layout=advanced&Submission-id=&submitter-id=&submitter-username-partial=&bot-action=approve&verification-status=verified&distinct-action-not=mark-added&distinct-action-not=reject&title-partial=&platform-partial=&library-partial=&launch-command-fuzzy=&original-filename-partial-any=&current-filename-partial-any=&md5sum-partial-any=&sha256sum-partial-any=&results-per-page=%d&page=&order-by=uploaded&asc-desc=asc", a.config.BaseURL, n))
 	a.fatalErr(err)
 
-	submissions := make([]submission, 0, n)
+	submissions := make([]Submission, 0, n)
 
 	line := string(resp)
 	q := gjson.Get(line, "Submissions.#.SubmissionID")
@@ -141,26 +155,45 @@ func (a *app) search(n int) {
 
 	a.printlnf("found %d submissions", len(results))
 
+	ch := make(chan struct{}, a.config.DownloadThreads)
+	var i int64
+	for i = 0; i < a.config.DownloadThreads; i++ {
+		ch <- struct{}{}
+	}
+	wg := sync.WaitGroup{}
+
+	mutex := sync.Mutex{}
+
 	for _, result := range results {
-		submission := submission{
+		submission := Submission{
 			id: result.Int(),
 		}
 
-		a.printlnf("getting metadata for submission %d...", submission.id)
+		go func() {
+			wg.Add(1)
+			defer wg.Done()
+			<-ch
+			a.printlnf("getting metadata for Submission %d...", submission.id)
 
-		body, err, _ := a.getFile(fmt.Sprintf("%s/web/submission/%d/files", a.config.BaseURL, submission.id))
-		a.fatalErr(err)
+			body, err, _ := a.getFile(fmt.Sprintf("%s/web/Submission/%d/files", a.config.BaseURL, submission.id))
+			a.fatalErr(err)
 
-		doc, err := goquery.NewDocumentFromReader(body)
-		body.Close()
-		a.fatalErr(err)
+			doc, err := goquery.NewDocumentFromReader(body)
+			body.Close()
+			a.fatalErr(err)
 
-		submission.fileURL, _ = doc.Find(".pure-table > tbody:nth-child(2) > tr:nth-child(1) > td:nth-child(1) > a:nth-child(1)").Attr("href")
-		submission.sha256 = doc.Find(".pure-table > tbody:nth-child(2) > tr:nth-child(1) > td:nth-child(9)").Text()
-		submission.status = statusWaiting
+			submission.fileURL, _ = doc.Find(".pure-table > tbody:nth-child(2) > tr:nth-child(1) > td:nth-child(1) > a:nth-child(1)").Attr("href")
+			submission.sha256 = doc.Find(".pure-table > tbody:nth-child(2) > tr:nth-child(1) > td:nth-child(9)").Text()
+			submission.status = statusWaiting
 
-		submissions = append(submissions, submission)
+			mutex.Lock()
+			submissions = append(submissions, submission)
+			mutex.Unlock()
+			ch <- struct{}{}
+		}()
 	}
+
+	wg.Wait()
 
 	a.printlnf("saving submissions to DB...")
 	for _, submission := range submissions {
@@ -168,7 +201,7 @@ func (a *app) search(n int) {
 	}
 }
 
-func (a *app) insertNewSubmission(submission submission) {
+func (a *app) insertNewSubmission(submission Submission) {
 	_, err := a.db.Exec(`INSERT INTO data (id, status, file_url, sha256) VALUES (?, ?, ?, ?)`,
 		submission.id, submission.status, submission.fileURL, submission.sha256)
 	a.fatalErr(err)
