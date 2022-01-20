@@ -1,7 +1,9 @@
 package main
 
 import (
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
@@ -18,15 +20,14 @@ import (
 )
 
 const (
-	dbName             = "db.db"
-	filePath           = "./downloads"
-	statusWaiting      = "waiting"
-	statusDownloading  = "downloading"
-	statusChecksumming = "checksumming"
-	statusDone         = "done"
-	actionSearch       = "search"
-	actionDownload     = "download"
-	actionMarkAdded    = "mark"
+	dbName           = "db.db"
+	filePath         = "./downloads"
+	statusWaiting    = "waiting"
+	statusDownloaded = "downloaded"
+	statusMarked     = "marked"
+	actionSearch     = "search"
+	actionDownload   = "download"
+	actionMarkAdded  = "mark"
 )
 
 func main() {
@@ -97,15 +98,28 @@ func (a *app) download() {
 		body, err, filename := a.getFile(fmt.Sprintf("%s%s", a.config.BaseURL, submission.fileURL))
 		a.fatalErr(err)
 
-		out, err := os.Create(fmt.Sprintf("%s/%s", filePath, filename))
+		fp := fmt.Sprintf("%s/%s", filePath, filename)
+		destination, err := os.Create(fp)
 		a.fatalErr(err)
-		_, err = io.Copy(out, body)
+		sha256sum := sha256.New()
+		multiWriter := io.MultiWriter(destination, sha256sum)
+		_, err = io.Copy(multiWriter, body)
 		body.Close()
 		a.fatalErr(err)
+
+		if submission.sha256 != string(hex.EncodeToString(sha256sum.Sum(nil))) {
+			a.printlnf("FAILED: checksum mismatch on submission %d, removing file...", submission.id)
+			os.Remove(fp)
+		}
+
+		a.updateSubmissionStatus(submission.id, statusDownloaded)
+		a.printlnf("OK: submission %d successfully downloaded", submission.id)
 	}
 }
 
 func (a *app) updateSubmissionStatus(id int64, status string) {
+	a.dbm.Lock()
+	defer a.dbm.Unlock()
 	_, err := a.db.Exec(`UPDATE data SET status=? WHERE id=?`, status, id)
 	a.fatalErr(err)
 }
