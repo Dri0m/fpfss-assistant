@@ -13,3 +13,10 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+.env
+log.log
+db.db*
+*.sqlite3
+*.sqlite3-journal
+*.log.gz
