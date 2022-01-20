@@ -109,7 +109,7 @@ func (a *app) download() {
 			body, err, filename := a.getFile(fmt.Sprintf("%s%s", a.config.BaseURL, submission.fileURL))
 			a.fatalErr(err)
 
-			fp := fmt.Sprintf("%s/%s", filePath, filename)
+			fp := fmt.Sprintf("%s/%d-%s", filePath, submission.id, filename)
 			destination, err := os.Create(fp)
 			a.fatalErr(err)
 			sha256sum := sha256.New()
