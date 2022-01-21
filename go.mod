@@ -6,6 +6,7 @@ require (
 	github.com/BurntSushi/toml v1.0.0 // indirect
 	github.com/PuerkitoBio/goquery v1.8.0 // indirect
 	github.com/joho/godotenv v1.4.0
+	github.com/kennygrant/sanitize v1.2.4 // indirect
 	github.com/mattn/go-sqlite3 v1.14.10
 	github.com/sirupsen/logrus v1.8.1
 	github.com/tidwall/gjson v1.13.0 // indirect

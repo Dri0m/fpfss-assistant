@@ -54,7 +54,8 @@ func (a *app) openDB() {
 			id INT PRIMARY KEY,
 			status TEXT,
 			file_url TEXT,
-			sha256 TEXT
+			sha256 TEXT,
+			title TEXT
 		)
 		`)
 	a.fatalErr(err)
