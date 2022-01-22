@@ -37,6 +37,7 @@ func (a *app) mark(ignore, reject []int64) {
 		go func(submission Submission) {
 			defer wg.Done()
 			<-ch
+			defer func() { ch <- struct{}{} }()
 
 			found := false
 			for _, id := range ignore {
@@ -64,6 +65,7 @@ func (a *app) mark(ignore, reject []int64) {
 					return
 				}
 				a.updateSubmissionStatus(submission.id, statusMarked)
+				return
 			}
 
 			a.printlnf("marking submission as added with ID %d", submission.id)

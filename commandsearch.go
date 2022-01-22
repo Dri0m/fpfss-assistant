@@ -54,6 +54,7 @@ func (a *app) search(n int) {
 		go func() {
 			defer wg.Done()
 			<-ch
+			defer func() { ch <- struct{}{} }()
 			a.printlnf("getting metadata for submission %d...", submission.id)
 
 			body, err, _ := a.getFile(fmt.Sprintf("%s/web/submission/%d/files", a.config.BaseURL, submission.id))
@@ -70,7 +71,6 @@ func (a *app) search(n int) {
 			mutex.Lock()
 			submissions = append(submissions, submission)
 			mutex.Unlock()
-			ch <- struct{}{}
 		}()
 	}
 

@@ -48,6 +48,7 @@ func (a *app) download() {
 		go func(submission Submission) {
 			defer wg.Done()
 			<-ch
+			defer func() { ch <- struct{}{} }()
 			a.printlnf("downloading submission with ID %d", submission.id)
 			body, err, filename := a.getFile(fmt.Sprintf("%s%s", a.config.BaseURL, submission.fileURL))
 			a.fatalErr(err)
@@ -69,7 +70,6 @@ func (a *app) download() {
 
 			a.updateSubmissionStatus(submission.id, statusDownloaded)
 			a.printlnf("OK: submission with ID %d successfully downloaded", submission.id)
-			ch <- struct{}{}
 		}(submission)
 	}
 	wg.Wait()
