@@ -12,8 +12,9 @@ import (
 	"sync/atomic"
 )
 
+// sanitizeFilename sanitizes the filename for Windows OS (NTFS)
 func sanitizeFilename(s string) string {
-	replacer := strings.NewReplacer("<", "_", ">", "_", ":", "_", "\"", "_", "/", "_", "\\", "_", "|", "_", "?", "_", "*", "_", "'", "_", "\n", "_")
+	replacer := strings.NewReplacer("<", "_", ">", "_", ":", "_", "\"", "_", "/", "_", "\\", "_", "|", "_", "?", "_", "*", "_", "'", "_", "\n", "_", "’", "_")
 	return replacer.Replace(s)
 }
 
