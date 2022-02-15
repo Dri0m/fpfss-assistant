@@ -55,7 +55,7 @@ func main() {
 			a.printlnf("invalid number provided (provide flag -n=N)")
 			os.Exit(1)
 		}
-		a.search(nFlag)
+		a.search(nFlag, a.config.Platforms)
 	case actionDownload:
 		a.download()
 	case actionMarkAdded:

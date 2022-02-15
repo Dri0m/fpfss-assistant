@@ -11,6 +11,7 @@ type Config struct {
 	DownloadThreads int64
 	Cookie          string
 	BaseURL         string
+	Platforms       string
 }
 
 func EnvString(name string) string {
@@ -52,5 +53,6 @@ func (a *app) getConfig(l *logrus.Logger) {
 		DownloadThreads: EnvInt("THREADS"),
 		Cookie:          EnvString("COOKIE"),
 		BaseURL:         EnvString("BASE_URL"),
+		Platforms:       EnvString("PLATFORMS"),
 	}
 }

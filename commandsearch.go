@@ -6,13 +6,14 @@ import (
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/tidwall/gjson"
+	"net/url"
 	"sync"
 )
 
-func (a *app) search(n int) {
+func (a *app) search(n int, platforms string) {
 	a.printlnf("searching for up to %d submisisons ready for FP...", n)
 
-	resp, err, _ := a.getResponse(fmt.Sprintf("%s/api/submissions?filter-layout=advanced&submission-id=&submitter-id=&submitter-username-partial=&bot-action=approve&requested-changes-status=none&verification-status=verified&distinct-action-not=mark-added&distinct-action-not=reject&title-partial=&platform-partial=&library-partial=&launch-command-fuzzy=&original-filename-partial-any=&current-filename-partial-any=&md5sum-partial-any=&sha256sum-partial-any=&results-per-page=%d&page=&assigned-status-user-id=&order-by=uploaded&asc-desc=asc", a.config.BaseURL, n))
+	resp, err, _ := a.getResponse(fmt.Sprintf("%s/api/submissions?filter-layout=advanced&submission-id=&submitter-id=&submitter-username-partial=&bot-action=approve&requested-changes-status=none&verification-status=verified&distinct-action-not=mark-added&distinct-action-not=reject&title-partial=&platform-partial=%s&library-partial=&launch-command-fuzzy=&original-filename-partial-any=&current-filename-partial-any=&md5sum-partial-any=&sha256sum-partial-any=&results-per-page=%d&page=&assigned-status-user-id=&order-by=uploaded&asc-desc=asc", a.config.BaseURL, url.QueryEscape(platforms), n))
 	a.fatalErr(err)
 
 	submissions := make([]Submission, 0, n)
