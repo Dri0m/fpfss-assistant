@@ -12,10 +12,10 @@ import (
 	"sync/atomic"
 )
 
-// sanitizeFilename sanitizes the filename for Windows OS (NTFS)
+// sanitizeFilename sanitizes the filename for Windows OS (NTFS) and shortens it
 func sanitizeFilename(s string) string {
-	replacer := strings.NewReplacer("<", "_", ">", "_", ":", "_", "\"", "_", "/", "_", "\\", "_", "|", "_", "?", "_", "*", "_", "'", "_", "\n", "_", "’", "_")
-	return replacer.Replace(s)
+	replacer := strings.NewReplacer("<", "_", ">", "_", ":", "_", "\"", "_", "/", "_", "\\", "_", "|", "_", "?", "_", "*", "_", "'", "_", "\n", "_", "’", "_") 
+	return replacer.Replace(s[0:63])
 }
 
 func (a *app) download() {
